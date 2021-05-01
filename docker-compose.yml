@@ -1,0 +1,39 @@
+version: '3'
+
+services:
+  mysql:
+    build:
+      context: ./mysql5.7
+    volumes:
+      - ./mysql5.7/mysql:/var/lib/mysql
+      - ./mysql5.7/mysqlvolume:/mysqlvolume
+    ports:
+      - 13106:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=test
+      - MYSQL_USER=test
+      - MYSQL_PASSWORD=test
+      - TZ=Asia/Tokyo
+  php:
+    build:
+      context: ./php7.2
+    volumes:
+      - ./html:/var/www/html
+    ports:
+      - 10180:80
+    links:
+      - mysql:mysql
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    environment:
+      - PMA_ARBITRARY=1
+      - PMA_HOST=mysql
+      - PMA_USER=root
+      - PMA_PASSWORD=root
+    ports:
+      - 10181:80
+    volumes:
+      - ./phpmyadmin/sessions:/sessions
+    links:
+      - mysql:mysql

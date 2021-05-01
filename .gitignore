@@ -1,0 +1,9 @@
+.vscode
+.DS_Store
+
+/html/php-challenge/member_picture/*
+!/html/php-challenge/member_picture/.gitkeep
+
+/mysql5.7/mysql
+/mysql5.7/mysqlvolume/*
+!/mysql5.7/mysqlvolume/.gitkeep
