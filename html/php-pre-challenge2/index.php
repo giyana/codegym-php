@@ -1,5 +1,5 @@
 <?php
-$array = array(3, 2, 1, 4, 15, 18, 13, 99, 77, 66, 1, 100, 0);
+$array = explode(',', $_GET['array']);
 
 // 修正はここから
 for ($i = 0; $i < count($array); $i++) {
