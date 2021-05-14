@@ -2,9 +2,10 @@
 $array = explode(',', $_GET['array']);
 
 // 修正はここから
-for ($i = 0; $i < count($array); $i++) {
+$count = count($array);
+for ($i = 0; $i < $count; $i++) {
     //要素個数-1回入れ替えを行う
-    for ($j = 1; $j < count($array); $j++) {
+    for ($j = 1; $j < $count; $j++) {
         //隣と数字入れ替え
         if ($array[$j - 1] > $array[$j]) {
             $subs = $array[$j];
