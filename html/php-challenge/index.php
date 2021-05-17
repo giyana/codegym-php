@@ -18,6 +18,8 @@ if (isset($_SESSION['id']) && $_SESSION['time'] + 3600 > time()) {
 // 投稿を記録する
 if (!empty($_POST)) {
     if ($_POST['message'] != '') {
+        //このSQL文だと保存に成功する
+        //INSERT INTO posts SET member_id=1, message="phpmyadminから入力しました", reply_post_id=0, created="2021-05-17 21:27:43",retweet_post_id=0 
         $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id=?, created=NOW()');
         $message->execute(array(
             $member['id'],
