@@ -15,22 +15,22 @@ if (isset($_SESSION['id']) && $_SESSION['time'] + 3600 > time()) {
     exit();
 }
 
+//SQLに渡す前に変数でreply_post_id空文字をどう処理するか定義(空文字送信するとSQLに反映されないため)
+if (empty($_POST['reply_post_id'])) {
+    $reply_post_id = "0";
+} else {
+    $reply_post_id = $_POST['reply_post_id'];
+}
+
 // 投稿を記録する
-//このSQL文だと保存に成功する
-//INSERT INTO posts SET member_id=1, message="phpmyadminから入力しました", reply_post_id=0, created="2021-05-17 21:27:43",
 if (!empty($_POST)) {
     if ($_POST['message'] != '') {
-        $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
-        /* $message = $db->prepare('INSERT INTO posts SET member_id=0, message="zzzz", reply_post_id=1, created=NOW()'); */
-        // reply_post_id がなぜか× 
-
+        $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id = ' . $reply_post_id . ', retweet_post_id=?, created=NOW()');
         $message->execute(array(
             $member['id'],
             $_POST['message'],
-            $_POST['reply_post_id'],
             $_POST['retweet_post_id']
         ));
-
         header('Location: index.php');
         exit();
     }
