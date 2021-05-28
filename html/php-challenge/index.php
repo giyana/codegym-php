@@ -22,19 +22,19 @@ if (empty($_POST['reply_post_id'])) {
     $reply_post_id = $_POST['reply_post_id'];
 }
 
-// 投稿を記録する
+//初投稿時+返信時
 if (!empty($_POST)) {
     if ($_POST['message'] != '') {
-        $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id = ' . $reply_post_id . ', retweet_post_id=?, created=NOW()');
+        $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id= ' . $reply_post_id . ', retweet_post_id=0, created=NOW()');
         $message->execute(array(
             $member['id'],
             $_POST['message'],
-            $_POST['retweet_post_id']
         ));
         header('Location: index.php');
         exit();
     }
 }
+
 
 // 投稿を取得する
 $page = $_REQUEST['page'];
@@ -120,11 +120,48 @@ function makeLink($value)
 
                     <p class="day">
                         <!-- 課題：リツイートといいね機能の実装 -->
+                        <?php
+                        //ボタンを押すとRT数+1
+                        if (isset($_POST['retweet_count'])) {
+                            $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 ');
+                            $retweet_count_up->execute(array($_POST['retweet_count']));
+                        }
+                        //ボタンを押すといいね数+1
+                        if (isset($_POST['favorite_count'])) {
+                            $retweet_count_up = $db->prepare('UPDATE posts SET favorite_count = favorite_count + 1 ');
+                            $retweet_count_up->execute(array($_POST['favorite_count']));
+                        }
+                        ?>
+
                         <span class="retweet">
-                            <img class="retweet-image" src="images/retweet-solid-gray.svg"><span style="color:gray;">12</span>
+                            <form action="" method="post">
+                                <!-- RT数が0かで色分け条件分岐 -->
+                                <?php if ($post['retweet_count'] === "0") : ?>
+                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
+                                <?php else : ?>
+                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-blue.svg"></button>
+                                    <span style="color:gray;">
+                                        <?php
+                                        //RT数を取得する
+                                        echo h($post['retweet_count'])
+                                        ?>
+                                    <?php endif; ?>
+                            </form>
                         </span>
                         <span class="favorite">
-                            <img class="favorite-image" src="images/heart-solid-gray.svg"><span style="color:gray;">34</span>
+                            <form action="" method="post">
+                                <!-- いいね数が0かで色分け条件分岐 -->
+                                <?php if ($post['favorite_count'] === "0") : ?>
+                                    <button type="submit" name="favorite_count"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
+                                <?php else : ?>
+                                    <button type="submit" name="favorite_count"><img class="favorite-image" src="images/heart-solid-red.svg"></button>
+                                    <span style="color:gray;">
+                                        <?php
+                                        //いいね数を取得する
+                                        echo h($post['favorite_count'])
+                                        ?>
+                                    <?php endif; ?>
+                            </form>
                         </span>
 
                         <a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
