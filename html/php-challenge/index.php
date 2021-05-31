@@ -153,17 +153,27 @@ if (isset($_POST['favorite'])) {
                             echo h($post['retweet_count']);
                             ?>
                         </span>
-                        <span class="favorite">
-                            <!-- いいねボタンを押したときのフォーム -->
-                            <form action="" method="post">
-                                <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
-                                <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
-                            </form>
-                            <?php
-                            //いいね数を表示する
-                            echo h($favorite_count['COUNT(id)']);
-                            ?>
-                        </span>
+
+                        <?php if ($favorite_count['COUNT(id)'] == 0) : ?>
+                            <span class="favorite">
+                                <!-- いいねボタンを押したときのフォーム -->
+                                <form action="" method="post">
+                                    <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
+                                    <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
+                                </form>
+                                <span style="color:gray;"><?php echo h($favorite_count['COUNT(id)']) ?>
+                                </span>
+                            </span>
+                        <?php else : ?>
+                            <span class="favorite">
+                                <form action="" method="post">
+                                    <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-red.svg"></button>
+                                    <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
+                                </form>
+                                <span style="color:red;"><?php echo h($favorite_count['COUNT(id)']) ?>
+                                </span>
+                            </span>
+                        <?php endif; ?>
 
                         <a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
                         <?php
