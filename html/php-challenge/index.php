@@ -35,7 +35,6 @@ if (!empty($_POST)) {
     }
 }
 
-
 // 投稿を取得する
 $page = $_REQUEST['page'];
 if ($page == '') {
@@ -79,13 +78,12 @@ function makeLink($value)
 
 //ボタンを押すとRT数+1
 if (isset($_POST['retweet_count'])) {
-    $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 ');
-    $retweet_count_up->execute(array($_POST['retweet_count']));
+    $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 WHERE id=?');
+    $retweet_count_up->execute(array($_POST['post_id_rt']));
 }
 //ボタンを押すとfavoritesテーブルにデータ挿入＆削除
 if (isset($_POST['favorite'])) {
     //すでにいいねしてる場合削除
-    var_dump($_POST['post_id_fav_del']);
     if(isset($_POST['post_id_fav_del'])){
     $favorites_del = $db->prepare('DELETE FROM favorites WHERE member_id = ? AND post_id = ?');
     $favorites_del->execute(array(
@@ -153,17 +151,25 @@ if (isset($_POST['favorite'])) {
                         $favorite_counts->execute();
                         $favorite_count = $favorite_counts->fetch();
                         ?>
+                    <!-- RTフォーム -->
+                        <!-- 各投稿のRT数が0かどうかで色変え条件分岐 -->
+                        <?php if($post['retweet_count'] == 0) : ?>
+                            <span class="retweet">
+                                <form action="" method="post">
+                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
+                                    <input type="hidden" name="post_id_rt" value="<?php print h($post['id']); ?>">
+                                </form>
+                                <span style="color:gray;"><?php echo h($post['retweet_count']) ?></span>
+                            </span>
+                        <?php else : ?>
+                            <span class="retweet">
+                                <form action="" method="post">
+                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-blue.svg"></button>
+                                    <input type="hidden" name="post_id_rt" value="<?php print h($post['id']); ?>">
+                                </form>
+                                <span style="color:blue;"><?php echo h($post['retweet_count']) ?></span>
+                        <?php endif; ?>
 
-                        <span class="retweet">
-                            <form action="" method="post">
-                                <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
-                                <input type="hidden" name="" value="<?php print h($post['id']); ?>">
-                            </form>
-                            <?php
-                            //RT数を表示する
-                            echo h($post['retweet_count']);
-                            ?>
-                        </span>
                     <!-- いいねフォーム -->
                         <!-- 各投稿の総いいね数が0かどうかで色替え条件分岐 -->
                         <?php if ($favorite_count['COUNT(id)'] == 0) : ?>
