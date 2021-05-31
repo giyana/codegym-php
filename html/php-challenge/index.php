@@ -82,13 +82,24 @@ if (isset($_POST['retweet_count'])) {
     $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 ');
     $retweet_count_up->execute(array($_POST['retweet_count']));
 }
-//ボタンを押すとfavoritesテーブルにデータ挿入
+//ボタンを押すとfavoritesテーブルにデータ挿入＆削除
 if (isset($_POST['favorite'])) {
+    //すでにいいねしてる場合削除
+    var_dump($_POST['post_id_fav_del']);
+    if(isset($_POST['post_id_fav_del'])){
+    $favorites_del = $db->prepare('DELETE FROM favorites WHERE member_id = ? AND post_id = ?');
+    $favorites_del->execute(array(
+        $member['id'],
+        $_POST['post_id_fav_del']
+    ));
+}else{
+    //以前にいいねなしの場合データ挿入
     $favorites = $db->prepare('INSERT INTO favorites SET member_id = ?, post_id = ?, created=NOW()');
     $favorites->execute(array(
         $member['id'],
         $_POST['post_id_fav']
     ));
+}
 }
 
 ?>
@@ -153,13 +164,15 @@ if (isset($_POST['favorite'])) {
                             echo h($post['retweet_count']);
                             ?>
                         </span>
-
+                    <!-- いいねフォーム -->
+                        <!-- 各投稿の総いいね数が0かどうかで色替え条件分岐 -->
                         <?php if ($favorite_count['COUNT(id)'] == 0) : ?>
                             <span class="favorite">
                                 <!-- いいねボタンを押したときのフォーム -->
                                 <form action="" method="post">
                                     <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
                                     <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
+                                <!-- 総いいね数表示 -->
                                 </form>
                                 <span style="color:gray;"><?php echo h($favorite_count['COUNT(id)']) ?>
                                 </span>
@@ -168,7 +181,7 @@ if (isset($_POST['favorite'])) {
                             <span class="favorite">
                                 <form action="" method="post">
                                     <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-red.svg"></button>
-                                    <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
+                                    <input type="hidden" name="post_id_fav_del" value="<?php print h($post['id']); ?>">
                                 </form>
                                 <span style="color:red;"><?php echo h($favorite_count['COUNT(id)']) ?>
                                 </span>
