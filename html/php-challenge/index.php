@@ -76,6 +76,21 @@ function makeLink($value)
 {
     return mb_ereg_replace("(https?)(://[[:alnum:]\+\$\;\?\.%,!#~*/:@&=_-]+)", '<a href="\1\2">\1\2</a>', $value);
 }
+
+//ボタンを押すとRT数+1
+if (isset($_POST['retweet_count'])) {
+    $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 ');
+    $retweet_count_up->execute(array($_POST['retweet_count']));
+}
+//ボタンを押すとfavoritesテーブルにデータ挿入
+if (isset($_POST['favorite'])) {
+    $favorites = $db->prepare('INSERT INTO favorites SET member_id = ?, post_id = ?, created=NOW()');
+    $favorites->execute(array(
+        $member['id'],
+        $_POST['post_id_fav']
+    ));
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="ja">
@@ -121,47 +136,33 @@ function makeLink($value)
                     <p class="day">
                         <!-- 課題：リツイートといいね機能の実装 -->
                         <?php
-                        //ボタンを押すとRT数+1
-                        if (isset($_POST['retweet_count'])) {
-                            $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 ');
-                            $retweet_count_up->execute(array($_POST['retweet_count']));
-                        }
-                        //ボタンを押すといいね数+1
-                        if (isset($_POST['favorite_count'])) {
-                            $retweet_count_up = $db->prepare('UPDATE posts SET favorite_count = favorite_count + 1 ');
-                            $retweet_count_up->execute(array($_POST['favorite_count']));
-                        }
+                        //各投稿の総いいね数を取得
+                        $favorite_counts = $db->prepare('SELECT COUNT(id) FROM favorites WHERE post_id=?');
+                        $favorite_counts->bindParam(1, $post['id']);
+                        $favorite_counts->execute();
+                        $favorite_count = $favorite_counts->fetch();
                         ?>
 
                         <span class="retweet">
                             <form action="" method="post">
-                                <!-- RT数が0かで色分け条件分岐 -->
-                                <?php if ($post['retweet_count'] === "0") : ?>
-                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
-                                <?php else : ?>
-                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-blue.svg"></button>
-                                    <span style="color:gray;">
-                                        <?php
-                                        //RT数を取得する
-                                        echo h($post['retweet_count'])
-                                        ?>
-                                    <?php endif; ?>
+                                <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
+                                <input type="hidden" name="" value="<?php print h($post['id']); ?>">
                             </form>
+                            <?php
+                            //RT数を表示する
+                            echo h($post['retweet_count']);
+                            ?>
                         </span>
                         <span class="favorite">
+                            <!-- いいねボタンを押したときのフォーム -->
                             <form action="" method="post">
-                                <!-- いいね数が0かで色分け条件分岐 -->
-                                <?php if ($post['favorite_count'] === "0") : ?>
-                                    <button type="submit" name="favorite_count"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
-                                <?php else : ?>
-                                    <button type="submit" name="favorite_count"><img class="favorite-image" src="images/heart-solid-red.svg"></button>
-                                    <span style="color:gray;">
-                                        <?php
-                                        //いいね数を取得する
-                                        echo h($post['favorite_count'])
-                                        ?>
-                                    <?php endif; ?>
+                                <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
+                                <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
                             </form>
+                            <?php
+                            //いいね数を表示する
+                            echo h($favorite_count['COUNT(id)']);
+                            ?>
                         </span>
 
                         <a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
