@@ -22,7 +22,7 @@ if (empty($_POST['reply_post_id'])) {
     $reply_post_id = $_POST['reply_post_id'];
 }
 
-//初投稿時+返信時
+//投稿
 if (!empty($_POST)) {
     if ($_POST['message'] != '') {
         $message = $db->prepare('INSERT INTO posts SET member_id=?, message=?, reply_post_id= ' . $reply_post_id . ', retweet_post_id=0, created=NOW()');
@@ -76,28 +76,51 @@ function makeLink($value)
     return mb_ereg_replace("(https?)(://[[:alnum:]\+\$\;\?\.%,!#~*/:@&=_-]+)", '<a href="\1\2">\1\2</a>', $value);
 }
 
-//ボタンを押すとRT数+1
-if (isset($_POST['retweet_count'])) {
-    $retweet_count_up = $db->prepare('UPDATE posts SET retweet_count = retweet_count + 1 WHERE id=?');
-    $retweet_count_up->execute(array($_POST['post_id_rt']));
+//rtに値が存在する場合、RT元の投稿を取得し、コピー
+//[rt]はRT元投稿のid
+if (isset($_REQUEST['rt'])) {
+    //RT元を取得する
+    $retweet_original = $db->prepare('SELECT * FROM posts WHERE id = ?');
+    $retweet_original->execute(array($_REQUEST['rt']));
+    $retweet_original_ref = $retweet_original->fetch();
+    //すでにRTされた投稿の数()
+    $retweets_fitst_ref = $db->prepare('SELECT COUNT(id) FROM posts WHERE retweet_post_id <> "0" AND member_id = ?');
+    $retweets_fitst_ref->execute(array($member['id']));
+    $retweet_first_ref = $retweets_fitst_ref->fetch();
+    if (isset($retweet_first_ref["COUNT(id)"])) {
+        //RT元を参照して、投稿(ボタン押すの1回目)
+        $retweet_post = $db->prepare('INSERT INTO posts SET message=?, member_id=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
+        $retweet_post->execute(array(
+            $retweet_original_ref['message'],
+            $retweet_original_ref['member_id'],
+            $retweet_original_ref['reply_post_id'],
+            $_REQUEST['rt']
+        ));
+    } else {
+        //RT済の場合、削除(ボタン押すの2回目)
+        $retweet_del = $db->prepare('DELETE FROM posts WHERE id = ?');
+        $retweet_del->execute(array($_REQUEST['rt']));
+    }
+    header('Location: index.php');
+    exit();
 }
 //ボタンを押すとfavoritesテーブルにデータ挿入＆削除
 if (isset($_POST['favorite'])) {
     //すでにいいねしてる場合削除
-    if(isset($_POST['post_id_fav_del'])){
-    $favorites_del = $db->prepare('DELETE FROM favorites WHERE member_id = ? AND post_id = ?');
-    $favorites_del->execute(array(
-        $member['id'],
-        $_POST['post_id_fav_del']
-    ));
-}else{
-    //以前にいいねなしの場合データ挿入
-    $favorites = $db->prepare('INSERT INTO favorites SET member_id = ?, post_id = ?, created=NOW()');
-    $favorites->execute(array(
-        $member['id'],
-        $_POST['post_id_fav']
-    ));
-}
+    if (isset($_POST['post_id_fav_del'])) {
+        $favorites_del = $db->prepare('DELETE FROM favorites WHERE member_id = ? AND post_id = ?');
+        $favorites_del->execute(array(
+            $member['id'],
+            $_POST['post_id_fav_del']
+        ));
+    } else {
+        //以前にいいねなしの場合データ挿入
+        $favorites = $db->prepare('INSERT INTO favorites SET member_id = ?, post_id = ?, created=NOW()');
+        $favorites->execute(array(
+            $member['id'],
+            $_POST['post_id_fav']
+        ));
+    }
 }
 
 ?>
@@ -140,6 +163,15 @@ if (isset($_POST['favorite'])) {
             ?>
                 <div class="msg">
                     <img src="member_picture/<?php echo h($post['picture']); ?>" width="48" height="48" alt="<?php echo h($post['name']); ?>" />
+                    <!-- RTした投稿の場合、名前表示 -->
+                    <p><?php
+                        //RTした人の名前を取得したい
+                        $menbers_ref = $db->prepare('SELECT * FROM members ');
+                        //$member_ref = $menber->fetch(); 
+                        if ($post['retweet_post_id'] != 0) {
+                            print h($post['name'] . "さんがリツイートしました");
+                        }
+                        ?></p>
                     <p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]</p>
 
                     <p class="day">
@@ -150,36 +182,36 @@ if (isset($_POST['favorite'])) {
                         $favorite_counts->bindParam(1, $post['id']);
                         $favorite_counts->execute();
                         $favorite_count = $favorite_counts->fetch();
-                        ?>
-                    <!-- RTフォーム -->
-                        <!-- 各投稿のRT数が0かどうかで色変え条件分岐 -->
-                        <?php if($post['retweet_count'] == 0) : ?>
-                            <span class="retweet">
-                                <form action="" method="post">
-                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-gray.svg"></button>
-                                    <input type="hidden" name="post_id_rt" value="<?php print h($post['id']); ?>">
-                                </form>
-                                <span style="color:gray;"><?php echo h($post['retweet_count']) ?></span>
-                            </span>
-                        <?php else : ?>
-                            <span class="retweet">
-                                <form action="" method="post">
-                                    <button type="submit" name="retweet_count"><img class="retweet-image" src="images/retweet-solid-blue.svg"></button>
-                                    <input type="hidden" name="post_id_rt" value="<?php print h($post['id']); ?>">
-                                </form>
-                                <span style="color:blue;"><?php echo h($post['retweet_count']) ?></span>
-                        <?php endif; ?>
 
-                    <!-- いいねフォーム -->
-                        <!-- 各投稿の総いいね数が0かどうかで色替え条件分岐 -->
-                        <?php if ($favorite_count['COUNT(id)'] == 0) : ?>
+                        //ログインしている人がいいねしているかどうか 0の場合いいねなし
+                        $favorites_ref = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
+                        $favorites_ref->execute(array(
+                            $member['id'],
+                            $post['id']
+                        ));
+                        $favorite_ref = $favorites_ref->fetch();
+
+                        
+                        //各投稿のRT数を取得
+                        $retweet_counts = $db->prepare('SELECT COUNT(id) FROM ')
+                        ?>
+
+                        <!-- RTフォーム -->
+                        <!-- RTボタンを押すと、post_idリンクに飛ぶ -->
+                        <span class="retweet">
+                            <a href="index.php?rt=<?php echo h($post['id']); ?>"><img class="retweet-image" src="images/retweet-solid-gray.svg"></a>
+                        </span>
+                        <!-- いいねフォーム -->
+                        <!-- ログインしている人が各投稿をいいねしているかどうかで色替え条件分岐 -->
+                        <?php if ((int)$favorite_ref["COUNT(*)"] === 0) : ?>
                             <span class="favorite">
                                 <!-- いいねボタンを押したときのフォーム -->
                                 <form action="" method="post">
                                     <button type="submit" name="favorite"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
                                     <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
-                                <!-- 総いいね数表示 -->
+                                    <!-- 総いいね数表示 -->
                                 </form>
+
                                 <span style="color:gray;"><?php echo h($favorite_count['COUNT(id)']) ?>
                                 </span>
                             </span>
