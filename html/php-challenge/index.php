@@ -188,7 +188,7 @@ if (isset($_POST['favorite'])) {
 <body>
     <div id="wrap">
         <div id="head">
-            <h1>1ひとこと掲示板</h1>
+            <h1>ひとこと掲示板</h1>
         </div>
         <div id="content">
             <div style="text-align: right"><a href="logout.php">ログアウト</a></div>
