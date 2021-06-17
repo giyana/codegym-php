@@ -246,6 +246,7 @@ if (isset($_POST['favorite'])) {
 
                     <p class="day">
                         <!-- 課題：リツイートといいね機能の実装 -->
+                        <!-- RTフォーム -->
                         <?php
                         //rt_post_id=0かどうか判定 RTされた投稿は$rt_fav_refに0が出力
                         $rt_favs_ref = $db->prepare('SELECT * FROM posts WHERE id = ? AND retweet_post_id = 0');
@@ -264,9 +265,6 @@ if (isset($_POST['favorite'])) {
                         //↑これはrt元のpost_id
                         ?>
 
-                        <!-- RTフォーム -->
-                        <!-- RTボタンを押すと、post_idをURLパラメーターで受け渡す -->
-                        <!--ログインしている人が各投稿RTしているか、どうかで色変え条件分岐 -->
                     <div class="retweet">
                         <?php
                         //ログインしている人がRTしているかどうか 元RTの場合0を出力
@@ -295,6 +293,7 @@ if (isset($_POST['favorite'])) {
                             $rt_counts->execute();
                         }
                         $rt_count = $rt_counts->fetch(PDO::FETCH_ASSOC);
+
                         //RT数0なら空文字出力
                         if ((int)$rt_count["COUNT(*)"] === 0) {
                             $rt_count = "";
@@ -309,8 +308,6 @@ if (isset($_POST['favorite'])) {
                             $member["id"]
                         ));
                         $login_pre_rt_id = $login_pre_rt_ids->fetch();
-
-
                         //var_dump($login_pre_rt_id["retweet_post_id"]);
 
                         //RT色分け RT元とRTされたもの
@@ -321,15 +318,15 @@ if (isset($_POST['favorite'])) {
                         }
                         //var_dump($rt_colors);
 
-
+                        //RTボタン
                         if ((int)$retweet_ref["retweet_post_id"] === 0) : ?>
                             <a href="index.php?rt=<?php echo h($post['id']); ?>&rt_fav_ref=<?php echo h((int)$rt_fav_ref) ?>&retweet_ref=<?php echo h((int)$retweet_ref) ?>">
                             <?php else : ?>
                                 <a href="index.php?rt=<?php echo h($post['id']); ?>">
                                 <?php endif; ?>
-                                <img class="retweet-image" src="images/retweet-solid-<?php echo $rt_colors ?>.svg"></a>
-                                <span style="color:<?php echo $rt_colors ?>;">
-                                <?php echo h($rt_count); ?>
+                                <img class="retweet-image" src="images/retweet-solid-<?php echo h($rt_colors) ?>.svg"></a>
+                                <span style="color:<?php echo h($rt_colors) ?>;">
+                                    <?php echo h($rt_count); ?>
                                 </span>
                     </div>
 
@@ -338,7 +335,7 @@ if (isset($_POST['favorite'])) {
                         各投稿をいいねしていいるか、過去RTをいいねしているか-->
                     <div class="favorite">
                         <?php
-                        //いいね数を取得
+                        //各投稿のいいね数を取得
                         $fav_counts = $db->prepare('SELECT COUNT(*) FROM favorites WHERE post_id=?');
                         if ((int)$post["retweet_post_id"] === 0) {
                             $fav_counts->bindParam(1, $post['id']);
@@ -348,80 +345,95 @@ if (isset($_POST['favorite'])) {
                             $fav_counts->execute();
                         }
                         $fav_count = $fav_counts->fetch(PDO::FETCH_ASSOC);
+
                         //fav数0なら空文字出力
                         if ((int)$fav_count["COUNT(*)"] === 0) {
                             $fav_count = "";
                         } else {
                             $fav_count = (int)$fav_count["COUNT(*)"];
                         }
+
+                        //ログインしている人が各投稿をいいねしているかどうか 
+                        $login_favs = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id= ?');
+                        $login_favs->execute(array(
+                            $member['id'],
+                            $post['id']
+                        ));
+                        $login_fav = $login_favs->fetch(PDO::FETCH_ASSOC);
+                        var_dump($login_fav["COUNT(*)"]);
+
+                        //fav色分け 自分の投稿に対して+人がRTした投稿に対して
+                        if ((int)$login_fav["COUNT(*)"] !== 0) {
+                            $fav_colors = "red";
+                        } else {
+                            $fav_colors = "gray";
+                        }
                         ?>
+
                         <!-- いいねボタンを押したときのフォーム -->
                         <form action="" method="post" style="display: inline-block;">
                             <input type="hidden" name="post_id" value="<?php print h($post["id"]); ?>">
                             <input type="hidden" name="origin_rt_fav" value="<?php print h((int)$origin_rt_fav); ?>">
                             <input type="hidden" name="rt_fav_refs" value="<?php print h((int)$rt_fav_ref); ?>">
+                            <button type="submit" name="favorite" style="background-color: transparent; border:none;">
+                                <img class="favorite-image" src="images/heart-solid-<?php echo h($fav_colors); ?>.svg"></button>
                             <?php if ((int)$favorite_ref["COUNT(*)"] === 0) : ?>
-                                <button type="submit" name="favorite" style="background-color: transparent; border:none;"><img class="favorite-image" src="images/heart-solid-gray.svg"></button>
                                 <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
-                        </form>
-                        <div style="display: inline-block;"><span style="color:gray;">
                             <?php else : ?>
-                                <button type="submit" name="favorite" style="background-color: transparent; border:none;"><img class="favorite-image" src="images/heart-solid-red.svg"></button>
                                 <input type="hidden" name="post_id_fav_del" value="<?php print h($post['id']); ?>">
-                                </form>
-                                <div style="display: inline-block;"><span style="color:red;">
-                                    <?php endif; ?>
-                                    <?php echo h($fav_count); ?>
-                                    </span></div>
+                            <?php endif; ?>
+                        </form>
+                        <div style="display: inline-block;">
+                            <span style="color:<?php echo h($fav_colors) ?>;"><?php echo h($fav_count); ?></span>
                         </div>
-
-                        <a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
-                        <?php
-                        if ($post['reply_post_id'] > 0) :
-                        ?><a href="view.php?id=<?php echo h($post['reply_post_id']); ?>">
-                                返信元のメッセージ</a>
-                        <?php
-                        endif;
-                        ?>
-                        <?php
-                        if ($_SESSION['id'] == $post['member_id']) :
-                        ?>
-                            [<a href="delete.php?id=<?php echo h($post['id']); ?>" style="color: #F33;">削除</a>]
-                        <?php
-                        endif;
-                        ?>
-                        </p>
                     </div>
-                <?php
-            endforeach;
-                ?>
-
-                <ul class="paging">
+                    <a href="view.php?id=<?php echo h($post['id']); ?>"><?php echo h($post['created']); ?></a>
                     <?php
-                    if ($page > 1) {
-                    ?>
-                        <li><a href="index.php?page=<?php print($page - 1); ?>">前のページへ</a></li>
+                    if ($post['reply_post_id'] > 0) :
+                    ?><a href="view.php?id=<?php echo h($post['reply_post_id']); ?>">
+                            返信元のメッセージ</a>
                     <?php
-                    } else {
-                    ?>
-                        <li>前のページへ</li>
-                    <?php
-                    }
+                    endif;
                     ?>
                     <?php
-                    if ($page < $maxPage) {
+                    if ($_SESSION['id'] == $post['member_id']) :
                     ?>
-                        <li><a href="index.php?page=<?php print($page + 1); ?>">次のページへ</a></li>
+                        [<a href="delete.php?id=<?php echo h($post['id']); ?>" style="color: #F33;">削除</a>]
                     <?php
-                    } else {
+                    endif;
                     ?>
-                        <li>次のページへ</li>
-                    <?php
-                    }
-                    ?>
-                </ul>
+                    </p>
                 </div>
+            <?php
+            endforeach;
+            ?>
+
+            <ul class="paging">
+                <?php
+                if ($page > 1) {
+                ?>
+                    <li><a href="index.php?page=<?php print($page - 1); ?>">前のページへ</a></li>
+                <?php
+                } else {
+                ?>
+                    <li>前のページへ</li>
+                <?php
+                }
+                ?>
+                <?php
+                if ($page < $maxPage) {
+                ?>
+                    <li><a href="index.php?page=<?php print($page + 1); ?>">次のページへ</a></li>
+                <?php
+                } else {
+                ?>
+                    <li>次のページへ</li>
+                <?php
+                }
+                ?>
+            </ul>
         </div>
+    </div>
 </body>
 
 </html>
