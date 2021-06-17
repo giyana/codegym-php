@@ -284,6 +284,7 @@ if (isset($_POST['favorite'])) {
                         //     $post['id']
                         // ));
                         // $favorite_ref = $favorites_ref->fetch();
+
                         //RT数を取得
                         $rt_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE retweet_post_id = ?');
                         //var_dump((int)$post['retweet_post_id']);
@@ -301,30 +302,34 @@ if (isset($_POST['favorite'])) {
                             $rt_count = (int)$rt_count["COUNT(*)"];
                         }
 
+                        //ログインしている人がRTした投稿のid 元投稿なら0 
+                        $login_pre_rt_ids = $db->prepare('SELECT * FROM posts WHERE id = ? AND member_id = ?');
+                        $login_pre_rt_ids->execute(array(
+                            $post["id"],
+                            $member["id"]
+                        ));
+                        $login_pre_rt_id = $login_pre_rt_ids->fetch();
 
 
-                        //RT色分け
-                        if ((int)$retweet_ref["retweet_post_id"] === 0) {
+                        //var_dump($login_pre_rt_id["retweet_post_id"]);
+
+                        //RT色分け RT元とRTされたもの
+                        if ((int)$retweet_ref["retweet_post_id"] !== 0 || (int)$login_pre_rt_id["retweet_post_id"] !== 0) {
                             $rt_colors = "blue";
                         } else {
                             $rt_colors = "gray";
                         }
+                        //var_dump($rt_colors);
 
 
                         if ((int)$retweet_ref["retweet_post_id"] === 0) : ?>
                             <a href="index.php?rt=<?php echo h($post['id']); ?>&rt_fav_ref=<?php echo h((int)$rt_fav_ref) ?>&retweet_ref=<?php echo h((int)$retweet_ref) ?>">
-                                <img class="retweet-image" src="images/retweet-solid-gray.svg"></a>
-                            <span style="color:gray;">
                             <?php else : ?>
-                                <a href="index.php?rt=<?php echo h($post['id']); ?>"><img class="retweet-image" src="images/retweet-solid-blue.svg"></a>
-                                <span style="color:blue;">
+                                <a href="index.php?rt=<?php echo h($post['id']); ?>">
                                 <?php endif; ?>
-
-                                <!-- <span style="color:<?php echo $rt_color ?>;"> -->
-
-                                <?php
-                                echo h($rt_count);
-                                ?>
+                                <img class="retweet-image" src="images/retweet-solid-<?php echo $rt_colors ?>.svg"></a>
+                                <span style="color:<?php echo $rt_colors ?>;">
+                                <?php echo h($rt_count); ?>
                                 </span>
                     </div>
 
