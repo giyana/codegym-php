@@ -353,17 +353,26 @@ if (isset($_POST['favorite'])) {
                             $fav_count = (int)$fav_count["COUNT(*)"];
                         }
 
-                        //ログインしている人が各投稿をいいねしているかどうか 
-                        $login_favs = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id= ?');
+                        //ログインしている人が各投稿をいいねしている数
+                        $login_favs = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
                         $login_favs->execute(array(
                             $member['id'],
                             $post['id']
                         ));
                         $login_fav = $login_favs->fetch(PDO::FETCH_ASSOC);
-                        var_dump($login_fav["COUNT(*)"]);
+                        //var_dump($login_fav["COUNT(*)"]);
+
+                        //RTされた投稿に対しいいねしている数
+                        $login_rt_favs = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
+                        $login_rt_favs->execute(array(
+                            $member['id'],
+                            $post['retweet_post_id']
+                        ));
+                        $login_rt_fav = $login_rt_favs->fetch(PDO::FETCH_ASSOC);
+                        var_dump($login_rt_fav["COUNT(*)"]);
 
                         //fav色分け 自分の投稿に対して+人がRTした投稿に対して
-                        if ((int)$login_fav["COUNT(*)"] !== 0) {
+                        if ((int)$login_fav["COUNT(*)"] !== 0 || (int)$login_rt_fav["COUNT(*)"] !== 0) {
                             $fav_colors = "red";
                         } else {
                             $fav_colors = "gray";
