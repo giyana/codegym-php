@@ -154,15 +154,25 @@ if (isset($_REQUEST['rt'])) {
 }
 
 //ボタンを押すとfavoritesテーブルにデータ挿入＆削除
-//var_dump((int)($_POST['origin_rt_fav']));
 if (isset($_POST['favorite'])) {
     //すでにいいねしてる場合削除
     if (isset($_POST['post_id_fav_del'])) {
+        //元投稿か、RTされているいいねなのか判別して削除
         $favorites_del = $db->prepare('DELETE FROM favorites WHERE member_id = ? AND post_id = ?');
-        $favorites_del->execute(array(
-            $member['id'],
-            (int)$_POST['post_id_fav_del']
-        ));
+        if ((int)$login_rt_fav["COUNT(*)"] === 0) {
+            print "a";
+            $favorites_del->execute(array(
+                $member['id'],
+                (int)$_POST['post_id_fav_del_rt']
+            ));
+        } else {
+            //元投稿
+            print "b";
+            $favorites_del->execute(array(
+                $member['id'],
+                (int)$_POST['post_id_fav_del']
+            ));
+        }
     } else {
         //RTされた投稿に対してのいいねは、post_idをRT元のものにする
         //var_dump((int)$_POST["rt_fav_refs"]);
@@ -360,9 +370,9 @@ if (isset($_POST['favorite'])) {
                             $post['id']
                         ));
                         $login_fav = $login_favs->fetch(PDO::FETCH_ASSOC);
-                        //var_dump($login_fav["COUNT(*)"]);
+                        var_dump($login_fav["COUNT(*)"]);
 
-                        //RTされた投稿に対しいいねしている数
+                        //ログインしている人が、各RTされた投稿に対しいいねしている数
                         $login_rt_favs = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
                         $login_rt_favs->execute(array(
                             $member['id'],
@@ -371,7 +381,7 @@ if (isset($_POST['favorite'])) {
                         $login_rt_fav = $login_rt_favs->fetch(PDO::FETCH_ASSOC);
                         var_dump($login_rt_fav["COUNT(*)"]);
 
-                        //fav色分け 自分の投稿に対して+人がRTした投稿に対して
+                        //fav色分け 
                         if ((int)$login_fav["COUNT(*)"] !== 0 || (int)$login_rt_fav["COUNT(*)"] !== 0) {
                             $fav_colors = "red";
                         } else {
@@ -386,10 +396,14 @@ if (isset($_POST['favorite'])) {
                             <input type="hidden" name="rt_fav_refs" value="<?php print h((int)$rt_fav_ref); ?>">
                             <button type="submit" name="favorite" style="background-color: transparent; border:none;">
                                 <img class="favorite-image" src="images/heart-solid-<?php echo h($fav_colors); ?>.svg"></button>
-                            <?php if ((int)$favorite_ref["COUNT(*)"] === 0) : ?>
+
+                            <?php if ((int)$login_fav["COUNT(*)"] === 0 && (int)$login_rt_fav["COUNT(*)"] === 0) : ?>
+                                <span>投稿</span>
                                 <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
                             <?php else : ?>
+                                <span>削除</span>
                                 <input type="hidden" name="post_id_fav_del" value="<?php print h($post['id']); ?>">
+                                <input type="hidden" name="post_id_fav_del_rt" value="<?php print h($post["retweet_post_id"]); ?>">
                             <?php endif; ?>
                         </form>
                         <div style="display: inline-block;">
