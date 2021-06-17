@@ -111,8 +111,6 @@ if (isset($_REQUEST['rt'])) {
             $_REQUEST['rt']
         ));
     } else {
-
-
         //RT削除かRT投稿をRTか条件分岐(この時点でretweet_post_id != 0)
         ////ログインしている人がRTしているかどうか trueで過去にRTあり
         if ($has_menber_rt) {
@@ -126,7 +124,7 @@ if (isset($_REQUEST['rt'])) {
                 $retweet_original_ref['message'],
                 $member['id'],
                 $retweet_original_ref['reply_post_id'],
-                $_POST['origin_rt_fav']
+                $retweet_original_ref['retweet_post_id']
             ));
         }
     }
@@ -229,7 +227,6 @@ if (isset($_POST['favorite'])) {
                         <!-- 課題：リツイートといいね機能の実装 -->
                         <?php
 
-                        //(RTされた投稿にいいねがついているかどうか判定用）
                         //rt_post_id=0かどうか判定 RTされた投稿は$rt_fav_refに0が出力
                         $rt_favs_ref = $db->prepare('SELECT * FROM posts WHERE id = ? AND retweet_post_id = 0');
                         $rt_favs_ref->execute(array($post['id']));
@@ -260,13 +257,13 @@ if (isset($_POST['favorite'])) {
                         //var_dump((int)$retweet_ref);
                         //var_dump((int)$retweet_ref["retweet_post_id"]);
 
-                        //ログインしている人がいいねしているかどうか 0の場合いいねなし
-                        $favorites_ref = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
-                        $favorites_ref->execute(array(
-                            $member['id'],
-                            $post['id']
-                        ));
-                        $favorite_ref = $favorites_ref->fetch();
+                        // //ログインしている人がいいねしているかどうか 0の場合いいねなし
+                        // $favorites_ref = $db->prepare('SELECT COUNT(*) FROM favorites WHERE member_id = ? AND post_id = ?');
+                        // $favorites_ref->execute(array(
+                        //     $member['id'],
+                        //     $post['id']
+                        // ));
+                        // $favorite_ref = $favorites_ref->fetch();
 
                         //RT数を取得
                         $rt_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE retweet_post_id = ?');
@@ -302,10 +299,13 @@ if (isset($_POST['favorite'])) {
                             <?php else : ?>
                                 <a href="index.php?rt=<?php echo h($post['id']); ?>"><img class="retweet-image" src="images/retweet-solid-blue.svg"></a>
                                 <span style="color:blue;">
-                                <?php endif; ?>
-                                <?php
-                                echo h($rt_count);
-                                ?>
+                            <?php endif; ?>
+                        
+                        <!-- <span style="color:<?php echo $rt_color ?>;"> -->
+
+                        <?php
+                        echo h($rt_count);
+                        ?>
                                 </span>
                     </div>
 
