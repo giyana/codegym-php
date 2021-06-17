@@ -35,6 +35,7 @@ if (!empty($_POST)) {
     }
 }
 
+
 // 投稿を取得する
 $page = $_REQUEST['page'];
 if ($page == '') {
