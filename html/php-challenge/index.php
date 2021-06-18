@@ -166,7 +166,7 @@ if (isset($_POST['favorite'])) {
             $favorites_rt = $db->prepare('INSERT INTO favorites SET member_id = ?, post_id = ?, created=NOW()');
             $favorites_rt->execute(array(
                 $member['id'],
-                $_POST['origin_rt_fav']
+                $_POST['retweet_post_id']
             ));
         } else {
             //RTされている投稿
@@ -243,16 +243,21 @@ if (isset($_POST['favorite'])) {
                         $rt_favs_ref->execute(array($post['id']));
                         $rt_fav_ref = $rt_favs_ref->fetch();
 
-                        //RT元の情報を取得 元ツイートの場合0を出力
-                        $origin_rts = $db->prepare('SELECT * FROM posts WHERE id = ?');
-                        $origin_rts->execute(array(($post['id'])));
-                        $origin_rt = $origin_rts->fetch();
-                        $origin_rt_fav = (int)$origin_rt["retweet_post_id"];
-                        //↑これはrt元のpost_id
+                        // //RT元の情報を取得 元ツイートの場合0を出力
+                        // $origin_rts = $db->prepare('SELECT * FROM posts WHERE id = ?');
+                        // $origin_rts->execute(array(($post['id'])));
+                        // $origin_rt = $origin_rts->fetch();
+                        // $origin_rt_fav = (int)$origin_rt["retweet_post_id"];
+                        // //↑これはrt元のpost_id
                         ?>
 
                     <div class="retweet">
                         <?php
+                    //     1. 自分がRTしていたら
+                    //     - ボタンを押したらRTが削除される
+                    //   2. 自分がRTしていなかったら
+                    //     - ボタンを押したらRTが実施される
+
                         //ログインしている人がRTしているかどうか 元RTの場合0を出力
                         $retweets_ref = $db->prepare('SELECT * FROM posts WHERE member_id = ? AND retweet_post_id = ? ');
                         $retweets_ref->execute(array($member['id'], $post['id']));
@@ -263,8 +268,7 @@ if (isset($_POST['favorite'])) {
                         if ((int)$post["retweet_post_id"] === 0) {
                             $rt_counts->execute(array($post['id']));
                         } else {
-                            $rt_counts->bindValue(1, $origin_rt_fav);
-                            $rt_counts->execute();
+                            $rt_counts->execute(array($post['retweet_post_id']));
                         }
                         $rt_count = $rt_counts->fetch(PDO::FETCH_ASSOC);
 
@@ -310,11 +314,9 @@ if (isset($_POST['favorite'])) {
                         //各投稿のいいね数を取得
                         $fav_counts = $db->prepare('SELECT COUNT(*) FROM favorites WHERE post_id=?');
                         if ((int)$post["retweet_post_id"] === 0) {
-                            $fav_counts->bindParam(1, $post['id']);
-                            $fav_counts->execute();
+                            $fav_counts->execute(array($post['id']));
                         } else {
-                            $fav_counts->bindValue(1, $origin_rt_fav);
-                            $fav_counts->execute();
+                            $fav_counts->execute(array($post['retweet_post_id']));
                         }
                         $fav_count = $fav_counts->fetch(PDO::FETCH_ASSOC);
 
@@ -352,7 +354,7 @@ if (isset($_POST['favorite'])) {
                         <!-- いいねボタンを押したときのフォーム -->
                         <form action="" method="post" style="display: inline-block;">
                             <input type="hidden" name="post_id" value="<?php print h($post["id"]); ?>">
-                            <input type="hidden" name="origin_rt_fav" value="<?php print h((int)$origin_rt_fav); ?>">
+                            <input type="hidden" name="retweet_post_id" value="<?php print h($post["retweet_post_id"]); ?>">
                             <input type="hidden" name="rt_fav_refs" value="<?php print h((int)$rt_fav_ref); ?>">
                             <button type="submit" name="favorite" style="background-color: transparent; border:none;">
                                 <img class="favorite-image" src="images/heart-solid-<?php echo h($fav_colors); ?>.svg"></button>
