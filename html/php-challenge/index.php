@@ -109,6 +109,7 @@ if (isset($_REQUEST['rt'])) {
             $retweet_original_ref['reply_post_id'],
             $_REQUEST['rt']
         ));
+        print '元投稿RT';
     } else {
         //RT削除かRT投稿をRTか条件分岐(この時点でretweet_post_id != 0)
         ////ログインしている人がRTしているかどうか trueで過去にRTあり
@@ -120,6 +121,8 @@ if (isset($_REQUEST['rt'])) {
                 $retweet_original_ref['reply_post_id'],
                 $retweet_original_ref['retweet_post_id']
             ));
+            print 'not_login_rt';
+            //無限RTばぐは↑分岐が原因
         } else {
             $retweet_del = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
             //RTされていないツイートのボタンか、RT済の投稿のボタンを押したかで条件分岐
@@ -128,11 +131,13 @@ if (isset($_REQUEST['rt'])) {
                     $member['id'],
                     $_REQUEST['rt']
                 ));
+                print 'RT済投稿';
             } else {
                 $retweet_del->execute(array(
                     $member['id'],
                     $retweet_original_ref['retweet_post_id']
                 ));
+                print '元投稿削除';
             }
         }
     }
@@ -151,15 +156,12 @@ if (isset($_POST['favorite'])) {
                 $member['id'],
                 (int)$_POST['retweet_post_id']
             ));
-            print '‘RT投稿';
         } else {
             //元投稿
             $favorites_del->execute(array(
                 $member['id'],
-                (int)$_POST['post_id_fav_del']
-                //↑post[id]
+                $_POST["post_id"]
             ));
-            print '元投稿';
         }
     } else {
         //RTされた投稿に対してのいいねは、post_idをRT元のものにする
@@ -277,7 +279,7 @@ if (isset($_POST['favorite'])) {
                                 $is_retweeted_post_by_loginuser = true;
                             }
                         }
-                        var_dump($is_retweeted_post_by_loginuser);
+                        //var_dump($is_retweeted_post_by_loginuser);
                         //var_dump($is_retweeted_post_by_loginuser);
 
                         // $login_rt_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?'); 
@@ -377,7 +379,7 @@ if (isset($_POST['favorite'])) {
                             $post['retweet_post_id']
                         ));
                         $login_rt_fav = $login_rt_favs->fetch(PDO::FETCH_ASSOC);
-                        var_dump($login_rt_fav['COUNT(*)']);
+                        //var_dump($login_rt_fav['COUNT(*)']);
 
                         //fav色分け 
                         if ((int)$login_fav["COUNT(*)"] !== 0 || (int)$login_rt_fav["COUNT(*)"] !== 0) {
@@ -396,7 +398,6 @@ if (isset($_POST['favorite'])) {
                                 <img class="favorite-image" src="images/heart-solid-<?php echo h($fav_colors); ?>.svg"></button>
 
                             <?php if ((int)$login_fav["COUNT(*)"] === 0 && (int)$login_rt_fav["COUNT(*)"] === 0) : ?>
-                                <input type="hidden" name="post_id_fav" value="<?php print h($post['id']); ?>">
                             <?php else : ?>
                                 <input type="hidden" name="post_id_fav_del" value="<?php print h($post['id']); ?>">
                             <?php endif; ?>
