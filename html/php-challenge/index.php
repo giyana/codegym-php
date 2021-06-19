@@ -76,31 +76,23 @@ function makeLink($value)
     return mb_ereg_replace("(https?)(://[[:alnum:]\+\$\;\?\.%,!#~*/:@&=_-]+)", '<a href="\1\2">\1\2</a>', $value);
 }
 
-//RT元を取得する(押したRTボタンのある投稿)
-$retweet_original = $db->prepare('SELECT * FROM posts WHERE id = ?');
-$retweet_original->execute(array($_REQUEST['rt']));
-$retweet_original_ref = $retweet_original->fetch();
-
-//過去に自分がRTしている投稿があるか
-$has_rt_logins = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-$has_rt_logins->execute(array(
-    $member['id'],
-    $retweet_original_ref['retweet_post_id']
-));
-$has_rt_login = $has_rt_logins->fetch(PDO::FETCH_ASSOC);
-
 //rtに値が存在する場合、RT元の投稿を取得し、コピー
 //[rt]はRTボタンが置かれている投稿id
 if (isset($_REQUEST['rt'])) {
-    //ログインしている人が各投稿をRTしているかどうか判定する変数
-    $member_rts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-    $member_rts->execute(array(
-        $member['id'],
-        $retweet_original_ref['id']
-    ));
-    $member_rt = $member_rts->fetch(PDO::FETCH_ASSOC);
+    //RT元を取得する(押したRTボタンのある投稿)
+    $retweet_original = $db->prepare('SELECT * FROM posts WHERE id = ?');
+    $retweet_original->execute(array($_REQUEST['rt']));
+    $retweet_original_ref = $retweet_original->fetch();
 
     if ((int)$retweet_original_ref['retweet_post_id'] === 0) {
+        //ログインしている人が各投稿をRTしているかどうか判定する変数
+        $member_rts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+        $member_rts->execute(array(
+            $member['id'],
+            $retweet_original_ref['id']
+        ));
+        $member_rt = $member_rts->fetch(PDO::FETCH_ASSOC);
+
         //押したボタンのある投稿が、RT元orRTされていなかった投稿
         if ((int)$member_rt['COUNT(*)'] === 0) {
             $retweet_post = $db->prepare('INSERT INTO posts SET message=?, member_id=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
@@ -118,6 +110,14 @@ if (isset($_REQUEST['rt'])) {
             ));
         }
     } else {
+        //過去に自分がRTしている投稿があるか
+        $has_rt_logins = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+        $has_rt_logins->execute(array(
+            $member['id'],
+            $retweet_original_ref['retweet_post_id']
+        ));
+        $has_rt_login = $has_rt_logins->fetch(PDO::FETCH_ASSOC);
+
         if ((int)$has_rt_login['COUNT(*)'] === 0) {
             //押したボタンのある投稿が、RTされている投稿
             $re_retweet_post = $db->prepare('INSERT INTO posts SET message=?, member_id=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
