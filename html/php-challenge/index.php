@@ -212,7 +212,7 @@ if (isset($_POST['favorite'])) {
 
                         if ((int)$post['retweet_post_id'] !== 0) {
                             $view_post = $rt_original;
-                        }else{
+                        } else {
                             $view_post = $post;
                         }
                         echo makeLink(h($view_post['message'])); ?><span class="name">（<?php echo h($view_post['name']); ?>）</span>[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]</p>
@@ -222,8 +222,12 @@ if (isset($_POST['favorite'])) {
                         <!-- RTフォーム -->
                     <div class="retweet">
                         <?php
-
                         //ここでやること　空文字出力　RT総数　色分け
+
+                        //RT数集計
+                        $rt_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE retweet_post_id = ?');
+                        $rt_counts->execute(array($view_post["id"]));
+                        $rt_count = $rt_counts->fetch(PDO::FETCH_ASSOC);
 
                         //RT数0なら空文字出力
                         if ((int)$rt_count["COUNT(*)"] === 0) {
@@ -232,9 +236,17 @@ if (isset($_POST['favorite'])) {
                             $rt_count = (int)$rt_count["COUNT(*)"];
                         }
 
-
+                        //自分がRTしているかどうか
+                        $is_rted_by_login_user_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+                        $is_rted_by_login_user_counts->execute(array($member['id'], (int)$view_post['id']));
+                        $is_rted_by_login_user_count = $is_rted_by_login_user_counts->fetch(PDO::FETCH_ASSOC);
+                        $is_rted_by_login_user = false;
+                        if ((int)$is_rted_by_login_user_count['COUNT(*)'] !== 0) {
+                            $is_rted_by_login_user = true;
+                        }
+                        var_dump($is_rted_by_login_user);
                         //RT色分け RT元とRTされたもの
-                        if ($aaa) {
+                        if ($is_rted_by_login_user) {
                             $rt_colors = "blue";
                         } else {
                             $rt_colors = "gray";
@@ -245,7 +257,7 @@ if (isset($_POST['favorite'])) {
                         <a href="index.php?rt=<?php echo h($post['id']); ?>">
                             <img class="retweet-image" src="images/retweet-solid-<?php echo h($rt_colors) ?>.svg"></a>
                         <span style="color:<?php echo h($rt_colors) ?>;">
-                            <?php echo h($rt_count); 
+                            <?php echo h($rt_count);
                             ?>
                         </span>
                     </div>
