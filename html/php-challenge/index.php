@@ -76,7 +76,6 @@ function makeLink($value)
     return mb_ereg_replace("(https?)(://[[:alnum:]\+\$\;\?\.%,!#~*/:@&=_-]+)", '<a href="\1\2">\1\2</a>', $value);
 }
 
-//rtに値が存在する場合、RT元の投稿を取得し、コピー
 //[rt]はRTボタンが置かれている投稿id
 if (isset($_REQUEST['rt'])) {
     //RT元を取得する(押したRTボタンのある投稿)
@@ -98,7 +97,7 @@ if (isset($_REQUEST['rt'])) {
     if ((int)$is_retweeted_by_login_user_count['COUNT(*)'] !== 0) {
         $is_retweeted_by_login_user = true;
     }
-    
+
     //↑の結果を元にＲＴ投稿・削除処理
     if ($is_retweeted_by_login_user) {
         //RTを削除
@@ -107,7 +106,7 @@ if (isset($_REQUEST['rt'])) {
     } else {
         //RTを投稿
         $retweet_posts = $db->prepare('INSERT INTO posts SET member_id = ?, retweet_post_id = ?, created=NOW()');
-        $retweet_posts->execute(array($member['id'],(int)$retweeted_id));
+        $retweet_posts->execute(array($member['id'], (int)$retweeted_id));
     }
 
     header('Location: index.php');
@@ -197,14 +196,26 @@ if (isset($_POST['favorite'])) {
                     <!-- RTした投稿の場合、名前表示 -->
                     <p><?php
                         //RTした人の名前を取得したい
+
                         $members_ref = $db->prepare('SELECT * FROM members INNER JOIN posts ON members.id = posts.member_id WHERE posts.id = ?');
                         $members_ref->execute(array($post['id']));
-                        $member_ref = $members_ref->fetch();
-                        if ($post['retweet_post_id'] != 0) {
+                        $member_ref = $members_ref->fetch(PDO::FETCH_ASSOC);
+                        if ((int)$post['retweet_post_id'] !== 0) {
                             print h($member_ref["name"] . "さんがリツイートしました");
                         }
                         ?></p>
-                    <p><?php echo makeLink(h($post['message'])); ?><span class="name">（<?php echo h($post['name']); ?>）</span>[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]</p>
+                    <p><?php
+                        //RTされた投稿の情報
+                        $rt_originals = $db->prepare('SELECT * FROM members LEFT JOIN posts ON members.id = posts.member_id WHERE posts.id = ?');
+                        $rt_originals->execute(array($post['retweet_post_id']));
+                        $rt_original = $rt_originals->fetch(PDO::FETCH_ASSOC);
+
+                        if ((int)$post['retweet_post_id'] !== 0) {
+                            $view_post = $rt_original;
+                        }else{
+                            $view_post = $post;
+                        }
+                        echo makeLink(h($view_post['message'])); ?><span class="name">（<?php echo h($view_post['name']); ?>）</span>[<a href="index.php?res=<?php echo h($post['id']); ?>">Re</a>]</p>
 
                     <p class="day">
                         <!-- 課題：リツイートといいね機能の実装 -->
@@ -212,21 +223,7 @@ if (isset($_POST['favorite'])) {
                     <div class="retweet">
                         <?php
 
-                        //ログインしている人がRTしているかどうか 元RTの場合0を出力
-                        $retweets_ref = $db->prepare('SELECT * FROM posts WHERE member_id = ? AND retweet_post_id = ? ');
-                        $retweets_ref->execute(array($member['id'], $post['id']));
-                        $retweet_ref = $retweets_ref->fetch();
-
-                        //RT数を取得
-                        $rt_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE retweet_post_id = ?');
-                        if ((int)$post["retweet_post_id"] === 0) {
-                            //元投稿の場合
-                            $rt_counts->execute(array($post['id']));
-                        } else {
-                            //RT投稿の場合
-                            $rt_counts->execute(array($post['retweet_post_id']));
-                        }
-                        $rt_count = $rt_counts->fetch(PDO::FETCH_ASSOC);
+                        //ここでやること　空文字出力　RT総数　色分け
 
                         //RT数0なら空文字出力
                         if ((int)$rt_count["COUNT(*)"] === 0) {
@@ -235,26 +232,21 @@ if (isset($_POST['favorite'])) {
                             $rt_count = (int)$rt_count["COUNT(*)"];
                         }
 
-                        //ログインしている人がRTした投稿のid 元投稿なら0 
-                        $login_pre_rt_ids = $db->prepare('SELECT * FROM posts WHERE id = ? AND member_id = ?');
-                        $login_pre_rt_ids->execute(array(
-                            $post["id"],
-                            $member["id"]
-                        ));
-                        $login_pre_rt_id = $login_pre_rt_ids->fetch();
 
                         //RT色分け RT元とRTされたもの
-                        if ((int)$retweet_ref["retweet_post_id"] !== 0 || (int)$login_pre_rt_id["retweet_post_id"] !== 0) {
+                        if ($aaa) {
                             $rt_colors = "blue";
                         } else {
                             $rt_colors = "gray";
                         }
+
                         ?>
                         <!-- RTボタン -->
                         <a href="index.php?rt=<?php echo h($post['id']); ?>">
                             <img class="retweet-image" src="images/retweet-solid-<?php echo h($rt_colors) ?>.svg"></a>
                         <span style="color:<?php echo h($rt_colors) ?>;">
-                            <?php echo h($rt_count); ?>
+                            <?php echo h($rt_count); 
+                            ?>
                         </span>
                     </div>
 
