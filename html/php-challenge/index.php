@@ -244,7 +244,7 @@ if (isset($_POST['favorite'])) {
                         if ((int)$is_rted_by_login_user_count['COUNT(*)'] !== 0) {
                             $is_rted_by_login_user = true;
                         }
-                        var_dump($is_rted_by_login_user);
+
                         //RT色分け RT元とRTされたもの
                         if ($is_rted_by_login_user) {
                             $rt_colors = "blue";
