@@ -80,36 +80,61 @@ function makeLink($value)
 //[rt]はRTボタンが置かれている投稿id
 if (isset($_REQUEST['rt'])) {
     //RT元を取得する(押したRTボタンのある投稿)
-    $retweet_originals = $db->prepare('SELECT * FROM posts WHERE id = ?');
-    $retweet_originals->execute(array($_REQUEST['rt']));
-    $retweet_original = $retweet_originals->fetch();
+    $retweet_original = $db->prepare('SELECT * FROM posts WHERE id = ?');
+    $retweet_original->execute(array($_REQUEST['rt']));
+    $retweet_original_ref = $retweet_original->fetch();
 
-    if ((int)$retweet_original['retweet_post_id'] === 0) {
-        $retweeted_id = $retweet_original['id'];
+    if ((int)$retweet_original_ref['retweet_post_id'] === 0) {
+        //ログインしている人が各投稿をRTしているかどうか判定する変数
+        $member_rts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+        $member_rts->execute(array(
+            $member['id'],
+            $retweet_original_ref['id']
+        ));
+        $member_rt = $member_rts->fetch(PDO::FETCH_ASSOC);
+
+        //押したボタンのある投稿が、RT元orRTされていなかった投稿
+        if ((int)$member_rt['COUNT(*)'] === 0) {
+            $retweet_post = $db->prepare('INSERT INTO posts SET message=?, member_id=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
+            $retweet_post->execute(array(
+                $retweet_original_ref['message'],
+                $member['id'],
+                $retweet_original_ref['reply_post_id'],
+                $_REQUEST['rt']
+            ));
+        } else {
+            $retweet_del = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+            $retweet_del->execute(array(
+                $member['id'],
+                $_REQUEST['rt']
+            ));
+        }
     } else {
-        $retweeted_id = $retweet_original['retweet_post_id'];
-    }
+        //過去に自分がRTしている投稿があるか
+        $has_rt_logins = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+        $has_rt_logins->execute(array(
+            $member['id'],
+            $retweet_original_ref['retweet_post_id']
+        ));
+        $has_rt_login = $has_rt_logins->fetch(PDO::FETCH_ASSOC);
 
-    //自分が既にrtしてるかどうか
-    $is_retweeted_by_login_user_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-    $is_retweeted_by_login_user_counts->execute(array($member['id'], $retweeted_id));
-    $is_retweeted_by_login_user_count = $is_retweeted_by_login_user_counts->fetch(PDO::FETCH_ASSOC);
-    $is_retweeted_by_login_user = false;
-    if ((int)$is_retweeted_by_login_user_count['COUNT(*)'] !== 0) {
-        $is_retweeted_by_login_user = true;
+        if ((int)$has_rt_login['COUNT(*)'] === 0) {
+            //押したボタンのある投稿が、RTされている投稿
+            $re_retweet_post = $db->prepare('INSERT INTO posts SET message=?, member_id=?, reply_post_id=?, retweet_post_id=?, created=NOW()');
+            $re_retweet_post->execute(array(
+                $retweet_original_ref['message'],
+                $member['id'],
+                $retweet_original_ref['reply_post_id'],
+                $retweet_original_ref['retweet_post_id']
+            ));
+        } else {
+            $retweet_del = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+            $retweet_del->execute(array(
+                $member['id'],
+                $retweet_original_ref['retweet_post_id']
+            ));
+        }
     }
-    
-    //↑の結果を元にＲＴ投稿・削除処理
-    if ($is_retweeted_by_login_user) {
-        //RTを削除
-        $retweet_delete = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-        $retweet_delete->execute(array($member['id'], $retweeted_id));
-    } else {
-        //RTを投稿
-        $retweet_posts = $db->prepare('INSERT INTO posts SET member_id = ?, retweet_post_id = ?, created=NOW()');
-        $retweet_posts->execute(array($member['id'],(int)$retweeted_id));
-    }
-
     header('Location: index.php');
     exit();
 }
