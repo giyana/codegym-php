@@ -76,39 +76,15 @@ function makeLink($value)
     return mb_ereg_replace("(https?)(://[[:alnum:]\+\$\;\?\.%,!#~*/:@&=_-]+)", '<a href="\1\2">\1\2</a>', $value);
 }
 
-//[rt]はRTボタンが置かれている投稿id
-if (isset($_REQUEST['rt'])) {
-    //RT元を取得する(押したRTボタンのある投稿)
-    $retweet_originals = $db->prepare('SELECT * FROM posts WHERE id = ?');
-    $retweet_originals->execute(array($_REQUEST['rt']));
-    $retweet_original = $retweet_originals->fetch();
-
-    if ((int)$retweet_original['retweet_post_id'] === 0) {
-        $retweeted_id = $retweet_original['id'];
-    } else {
-        $retweeted_id = $retweet_original['retweet_post_id'];
-    }
-
-    //自分が既にrtしてるかどうか
-    $is_retweeted_by_login_user_counts = $db->prepare('SELECT COUNT(*) FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-    $is_retweeted_by_login_user_counts->execute(array($member['id'], $retweeted_id));
-    $is_retweeted_by_login_user_count = $is_retweeted_by_login_user_counts->fetch(PDO::FETCH_ASSOC);
-    $is_retweeted_by_login_user = false;
-    if ((int)$is_retweeted_by_login_user_count['COUNT(*)'] !== 0) {
-        $is_retweeted_by_login_user = true;
-    }
-
-    //↑の結果を元にＲＴ投稿・削除処理
-    if ($is_retweeted_by_login_user) {
-        //RTを削除
-        $retweet_delete = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
-        $retweet_delete->execute(array($member['id'], $retweeted_id));
-    } else {
-        //RTを投稿
+//RT投稿・削除
+if (isset($_REQUEST['rt_post']) || isset($_REQUEST['rt_del'])) {
+    if (isset($_REQUEST['rt_post'])) {
         $retweet_posts = $db->prepare('INSERT INTO posts SET member_id = ?, retweet_post_id = ?, created=NOW()');
-        $retweet_posts->execute(array($member['id'], (int)$retweeted_id));
+        $retweet_posts->execute(array($member['id'], (int)$_REQUEST['view_post']));
+    } else {
+        $retweet_delete = $db->prepare('DELETE FROM posts WHERE member_id = ? AND retweet_post_id = ?');
+        $retweet_delete->execute(array($member['id'], (int)$_REQUEST['view_post']));
     }
-
     header('Location: index.php');
     exit();
 }
@@ -251,15 +227,18 @@ if (isset($_POST['favorite'])) {
                         } else {
                             $rt_colors = "gray";
                         }
-
                         ?>
+
                         <!-- RTボタン -->
-                        <a href="index.php?rt=<?php echo h($post['id']); ?>">
-                            <img class="retweet-image" src="images/retweet-solid-<?php echo h($rt_colors) ?>.svg"></a>
-                        <span style="color:<?php echo h($rt_colors) ?>;">
-                            <?php echo h($rt_count);
-                            ?>
-                        </span>
+                        <?php if ($is_rted_by_login_user) : ?>
+                            <a href="index.php?rt_del=<?php echo h($post['id']); ?>
+                            <?php else : ?>
+                                <a href=" index.php?rt_post=<?php echo h($post['id']); ?> <?php endif; ?> &view_post=<?php echo h($view_post['id']); ?>">
+                                <img class="retweet-image" src="images/retweet-solid-<?php echo h($rt_colors) ?>.svg"></a>
+                            <span style="color:<?php echo h($rt_colors) ?>;">
+                                <?php echo h($rt_count);
+                                ?>
+                            </span>
                     </div>
 
                     <!-- いいねフォーム -->
